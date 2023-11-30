@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Multiplayer Pong</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        canvas {
+            background-color: #000;
+            display: block;
+            margin: 20px auto;
+        }
+
+        #gameControls,
+        #restartDiv {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="gameControls">
+        <button id="joinGameBtn">Join Game</button>
+        <h1>PONG GAME</h1>
+    </div>
+    <div id="restartDiv" style="display: none;">
+        <button id="restartBtn">Restart</button>
+    </div>
+    <canvas id="pongCanvas" width="800" height="400" style="display: none;"></canvas>
+
+    <script src="https://cdn.socket.io/4.3.2/socket.io.js"></script>
+    <script>
+        const canvas = document.getElementById('pongCanvas')
+        const context = canvas.getContext('2d')
+        const socket = io('http://localhost:3000')
+
+        let gameState = {
+            players: {},
+            ball: { x: 400, y: 200 },
+            scores: { player1: 0, player2: 0 },
+            gameOver: false
+        }
+
+        function drawPaddle(x, y) {
+            context.fillStyle = '#fff'
+            context.fillRect(x, y, 10, 100)
+        }
+
+        function drawBall(x, y) {
+            context.beginPath()
+            context.arc(x, y, 10, 0, Math.PI * 2)
+            context.fillStyle = '#fff'
+            context.fill()
+            context.closePath()
+        }
+
+        function updateGame() {
+            context.clearRect(0, 0, canvas.width, canvas.height)
+
+            if (gameState.players.player1) {
+                drawPaddle(10, gameState.players.player1.y)
+            }
+            if (gameState.players.player2) {
+                drawPaddle(canvas.width - 20, gameState.players.player2.y)
+            }
+
+            if (!gameState.gameOver) {
+                drawBall(gameState.ball.x, gameState.ball.y)
+            } else {
+                context.fillStyle = '#fff'
+                context.font = '30px Arial'
+                context.fillText('Game Over', canvas.width / 2 - 100, canvas.height / 2)
+                document.getElementById('restartDiv').style.display = 'block'
+            }
+
+            context.fillStyle = '#fff'
+            context.font = '20px Arial'
+            context.fillText(`Player 1: ${gameState.scores.player1}`, 100, 50)
+            context.fillText(`Player 2: ${gameState.scores.player2}`, canvas.width - 200, 50)
+
+            requestAnimationFrame(updateGame)
+        }
+
+        canvas.addEventListener('mousemove', (event) => {
+            if (!gameState.gameOver) {
+                let mouseY = event.clientY - canvas.getBoundingClientRect().top
+                if (mouseY > 0 && mouseY < canvas.height - 100) {
+                    socket.emit('paddleMove', mouseY)
+                }
+            }
+        })
+
+        socket.on('gameState', (state) => {
+            gameState = state
+        })
+
+        document.getElementById('joinGameBtn').addEventListener('click', () => {
+            document.getElementById('gameControls').style.display = 'none'
+            canvas.style.display = 'block'
+            updateGame()
+        })
+
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            socket.emit('restartGame')
+            document.getElementById('restartDiv').style.display = 'none'
+        });
+    </script>
+</body>
+
+</html>
