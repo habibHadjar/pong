@@ -65,13 +65,26 @@ io.on('connection', (socket) => {
 
     // Assign player number
     if (!gameState.players.player1) {
-        gameState.players.player1 = { id: socket.id, y: 150 }
+        gameState.players.player1 = { id: socket.id, y: 150, isReady: false }
     } else if (!gameState.players.player2 && socket.id !== gameState.players.player1.id) {
-        gameState.players.player2 = { id: socket.id, y: 150 }
+        gameState.players.player2 = { id: socket.id, y: 150, isReady: false }
     }
 
     // Send initial game state
     io.emit('gameState', gameState)
+
+    socket.on('playerReady', () => {
+        if (socket.id === gameState.players.player1.id) {
+            gameState.players.player1.isReady = true
+        } else if (socket.id === gameState.players.player2.id) {
+            gameState.players.player2.isReady = true
+        }
+
+        // Start game if both players are ready
+        if (gameState.players.player1.isReady && gameState.players.player2.isReady) {
+            gameState.isGameActive = true
+        }
+    })
 
     socket.on('paddleMove', (paddleY) => {
         if (socket.id === gameState.players.player1.id) {
@@ -100,8 +113,12 @@ io.on('connection', (socket) => {
         gameState.scores.player1 = 0
         gameState.scores.player2 = 0
         gameState.gameOver = false
+        gameState.players.player1.isReady = false
+        gameState.players.player2.isReady = false
+        gameState.isGameActive = false
         io.emit('gameState', gameState)
     })
+
 })
 
 server.listen(3000, () => {

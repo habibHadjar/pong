@@ -99,6 +99,7 @@
         })
 
         document.getElementById('joinGameBtn').addEventListener('click', () => {
+            socket.emit('playerReady')
             document.getElementById('gameControls').style.display = 'none'
             canvas.style.display = 'block'
             updateGame()
